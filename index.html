@@ -114,10 +114,15 @@
 </div>
 
 <div class="card">
-  <h2>Margin loan (calibrate from Fidelity)</h2>
+  <h2>Margin loan</h2>
+  <div class="field">
+    <label class="fl">Margin loan / debit balance (USD) — type it directly if you know it</label>
+    <input id="loanDirect" type="number" inputmode="decimal" placeholder="e.g. 312767" oninput="setLoanDirect(this.value)" />
+  </div>
+  <div class="note" style="text-align:center; margin:-4px 0 10px">— or calibrate it from your equity —</div>
   <div class="field">
     <label class="fl">Account equity right now (USD) — from your Fidelity account</label>
-    <input id="equityIn" type="number" inputmode="decimal" placeholder="e.g. 18450" />
+    <input id="equityIn" type="number" inputmode="decimal" placeholder="e.g. 535000" />
   </div>
   <button class="btn ghost row" onclick="calibrate()">Set loan from this equity</button>
   <div style="margin-top:12px">
@@ -130,7 +135,7 @@
     <label class="fl">Margin interest rate (%/yr, optional — for accrual between calibrations)</label>
     <input id="ratePct" type="number" inputmode="decimal" placeholder="e.g. 12" oninput="recompute()" />
   </div>
-  <div class="note">How it works: enter your real account equity from Fidelity and tap the button. The app sets your loan = current market value − equity. After that, Net Equity tracks live as prices move. Re-calibrate whenever you like; if you set a rate, the loan grows a little each day in between to estimate interest. Leave equity blank / loan 0 if you have no margin.</div>
+  <div class="note">Two ways to set your loan: (1) type your debit balance straight in, or (2) enter your current account equity and tap the button — the app sets loan = market value − equity. Either way, Net Equity then tracks live as prices move, and the interest rate below grows the loan a little each day until you update it. Note: the margin-shares column does NOT set the loan on its own — your loan is the fixed cash you borrowed, not the value of those shares. Leave this at 0 if you have no margin.</div>
 </div>
 
 <div class="card">
@@ -198,6 +203,7 @@ function load(){
   $("apiKey").value = state.apiKey||"";
   $("fxManual").value = state.fxManual||"";
   $("fxTheo").value = state.fxTheo||"3.4";
+  $("loanDirect").value = (parseFloat(state.baseLoan)>0)? state.baseLoan : "";
 }
 function saveState(){
   state.ratePct = $("ratePct").value;
@@ -283,6 +289,12 @@ function recompute(){
   });
 }
 
+function setLoanDirect(v){
+  const n=parseFloat(v);
+  state.baseLoan = (isFinite(n)&&n>0)? n : 0;
+  state.calibDate = state.baseLoan>0 ? Date.now() : null;
+  saveState(); recompute();
+}
 function calibrate(){
   const eq=parseFloat($("equityIn").value);
   if(!isFinite(eq)){ $("status").textContent="Enter your current account equity first"; return; }
@@ -291,6 +303,7 @@ function calibrate(){
   state.baseLoan = Math.max(0, mv-eq);
   state.calibDate = Date.now();
   $("equityIn").value="";
+  $("loanDirect").value = state.baseLoan.toFixed(2);
   saveState(); recompute();
   $("status").textContent="Loan calibrated: "+fmtUSD(state.baseLoan)+" ✓";
 }
